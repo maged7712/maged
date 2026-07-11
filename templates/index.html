@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>نغمة — تنزيل يوتيوب MP3</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="bg" aria-hidden="true">
+    <div class="orb orb-a"></div>
+    <div class="orb orb-b"></div>
+    <div class="grain"></div>
+  </div>
+
+  <main class="shell">
+    <header class="hero">
+      <p class="brand">نغمة</p>
+      <h1>حوّل أي مقطع يوتيوب إلى MP3</h1>
+      <p class="lead">الصق الرابط، وحمّل الملف مباشرة إلى جهازك.</p>
+
+      <form id="form" class="form" autocomplete="off">
+        <label class="sr-only" for="url">رابط يوتيوب</label>
+        <input
+          id="url"
+          name="url"
+          type="url"
+          placeholder="https://www.youtube.com/watch?v=..."
+          required
+        />
+        <button type="submit" id="submit">تنزيل MP3</button>
+      </form>
+
+      <div id="status" class="status" hidden>
+        <div class="status-row">
+          <span id="status-text">جاري التحضير...</span>
+          <span id="status-pct">0%</span>
+        </div>
+        <div class="bar"><div id="bar-fill" class="bar-fill"></div></div>
+      </div>
+    </header>
+
+    <section class="metrics" aria-label="إحصائيات الموقع">
+      <div class="metric">
+        <span class="metric-value" id="stat-visitors">0</span>
+        <span class="metric-label">زائر للصفحة</span>
+      </div>
+      <div class="metric-divider" aria-hidden="true"></div>
+      <div class="metric">
+        <span class="metric-value" id="stat-downloads">0</span>
+        <span class="metric-label">رابط تم تحميله</span>
+      </div>
+    </section>
+
+    <section class="library" aria-labelledby="library-title">
+      <div class="library-head">
+        <h2 id="library-title">الملفات الجاهزة</h2>
+        <p>آخر الملفات المحوّلة — اضغط تحميل لحفظها على جهازك</p>
+      </div>
+      <ul id="files" class="files"></ul>
+      <p id="empty" class="empty">لا توجد ملفات بعد. ابدأ بتنزيل أول مقطع.</p>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
