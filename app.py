@@ -14,11 +14,84 @@ DOWNLOADS_DIR = BASE_DIR / "downloads"
 DATA_DIR = BASE_DIR / "data"
 STATS_FILE = DATA_DIR / "stats.json"
 META_FILE = DATA_DIR / "files.json"
+COOKIES_FILE = DATA_DIR / "cookies.txt"
 
 DOWNLOADS_DIR.mkdir(exist_ok=True)
 DATA_DIR.mkdir(exist_ok=True)
 
 FFMPEG_PATH = imageio_ffmpeg.get_ffmpeg_exe()
+
+
+def resolve_cookies_path() -> str | None:
+    """Return a cookies.txt path if available (local file or env)."""
+    env_path = (os.environ.get("COOKIES_FILE") or "").strip()
+    if env_path and Path(env_path).exists():
+        return env_path
+
+    if COOKIES_FILE.exists() and COOKIES_FILE.stat().st_size > 0:
+        return str(COOKIES_FILE)
+
+    raw = os.environ.get("YTDLP_COOKIES", "").strip()
+    if raw:
+        runtime_cookies = DATA_DIR / "_runtime_cookies.txt"
+        content = raw.replace("\\n", "\n")
+        runtime_cookies.write_text(content, encoding="utf-8")
+        return str(runtime_cookies)
+
+    return None
+
+
+def build_ydl_opts(outtmpl: str, progress_hook) -> dict:
+    opts = {
+        "format": "bestaudio/best",
+        "outtmpl": outtmpl,
+        "noplaylist": True,
+        "quiet": True,
+        "no_warnings": True,
+        "ffmpeg_location": FFMPEG_PATH,
+        "progress_hooks": [progress_hook],
+        # android_vr often works on cloud IPs without login/PO token
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["android_vr", "android", "web", "mweb"],
+                "player_skip": ["webpage"],
+            }
+        },
+        "postprocessors": [
+            {
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": "mp3",
+                "preferredquality": "192",
+            }
+        ],
+    }
+
+    cookies = resolve_cookies_path()
+    if cookies:
+        opts["cookiefile"] = cookies
+
+    browser = (os.environ.get("COOKIES_FROM_BROWSER") or "").strip().lower()
+    if browser and "cookiefile" not in opts:
+        opts["cookiesfrombrowser"] = (browser,)
+
+    return opts
+
+
+def friendly_error(exc: Exception) -> str:
+    msg = str(exc)
+    low = msg.lower()
+    if "sign in to confirm" in low or "not a bot" in low:
+        return (
+            "يوتيوب رفض التحميل من خادم الاستضافة (حماية ضد البوتات). "
+            "الحل الأسهل: شغّل start.bat على جهازك. "
+            "أو صدّر cookies.txt من متصفحك وضعه في data/cookies.txt "
+            "أو أضفه كمتغير بيئة YTDLP_COOKIES في Render."
+        )
+    if "private video" in low:
+        return "هذا المقطع خاص ولا يمكن تنزيله."
+    if "video unavailable" in low:
+        return "المقطع غير متاح أو محذوف."
+    return msg
 
 app = Flask(__name__)
 
@@ -134,23 +207,7 @@ def download_mp3(job_id: str, url: str) -> None:
             update_job(job_id, progress=92, status="converting")
 
     outtmpl = str(work_dir / "%(id)s.%(ext)s")
-
-    ydl_opts = {
-        "format": "bestaudio/best",
-        "outtmpl": outtmpl,
-        "noplaylist": True,
-        "quiet": True,
-        "no_warnings": True,
-        "ffmpeg_location": FFMPEG_PATH,
-        "progress_hooks": [progress_hook],
-        "postprocessors": [
-            {
-                "key": "FFmpegExtractAudio",
-                "preferredcodec": "mp3",
-                "preferredquality": "192",
-            }
-        ],
-    }
+    ydl_opts = build_ydl_opts(outtmpl, progress_hook)
 
     try:
         with YoutubeDL(ydl_opts) as ydl:
@@ -189,7 +246,7 @@ def download_mp3(job_id: str, url: str) -> None:
                 work_dir.rmdir()
             except OSError:
                 pass
-        update_job(job_id, status="error", error=str(exc), progress=0)
+        update_job(job_id, status="error", error=friendly_error(exc), progress=0)
 
 
 @app.route("/")

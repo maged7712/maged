@@ -8,5 +8,6 @@ echo The browser will open automatically.
 echo Downloads folder: %~dp0downloads
 echo.
 set OPEN_BROWSER=1
+set COOKIES_FROM_BROWSER=chrome
 python app.py
 pause
